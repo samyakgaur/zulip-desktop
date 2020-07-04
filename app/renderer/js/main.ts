@@ -627,7 +627,7 @@ class ServerManagerView {
 
 		try {
 			this.tabs[index].webview.canGoBackButton();
-		} catch (_) {
+		} catch {
 		}
 
 		this.activeTabIndex = index;
@@ -717,7 +717,7 @@ class ServerManagerView {
 
 	updateGeneralSettings(setting: string, value: unknown): void {
 		if (this.getActiveWebview()) {
-			const webContents = this.getActiveWebview().getWebContents();
+			const webContents = remote.webContents.fromId(this.getActiveWebview().getWebContentsId());
 			webContents.send(setting, value);
 		}
 	}
@@ -893,7 +893,7 @@ class ServerManagerView {
 			webviews.forEach(webview => {
 				try {
 					webview.setAudioMuted(state);
-				} catch (_) {
+				} catch {
 					// Webview is not ready yet
 					webview.addEventListener('dom-ready', () => {
 						webview.setAudioMuted(state);
@@ -917,7 +917,7 @@ class ServerManagerView {
 		ipcRenderer.on('toggle-dnd', (event: Event, state: boolean, newSettings: DNDSettings) => {
 			this.toggleDNDButton(state);
 			ipcRenderer.send('forward-message', 'toggle-silent', newSettings.silent);
-			const webContents = this.getActiveWebview().getWebContents();
+			const webContents = remote.webContents.fromId(this.getActiveWebview().getWebContentsId());
 			webContents.send('toggle-dnd', state, newSettings);
 		});
 
@@ -969,7 +969,7 @@ class ServerManagerView {
 		ipcRenderer.on('focus-webview-with-id', (event: Event, webviewId: number) => {
 			const webviews: NodeListOf<Electron.WebviewTag> = document.querySelectorAll('webview');
 			webviews.forEach(webview => {
-				const currentId = webview.getWebContents().id;
+				const currentId = webview.getWebContentsId();
 				const tabId = webview.getAttribute('data-tab-id');
 				const concurrentTab: HTMLButtonElement = document.querySelector(`div[data-tab-id="${tabId}"]`);
 				if (currentId === webviewId) {
@@ -1046,7 +1046,8 @@ window.addEventListener('load', async () => {
 	// Only start electron-connect (auto reload on change) when its ran
 	// from `npm run dev` or `gulp dev` and not from `npm start`
 	if (isDev && remote.getGlobal('process').argv.includes('--electron-connect')) {
-		require('electron-connect').client.create();
+		// eslint-disable-next-line node/no-unsupported-features/es-syntax
+		(await import('electron-connect')).client.create();
 	}
 
 	const serverManagerView = new ServerManagerView();
